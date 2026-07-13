@@ -74,18 +74,20 @@ class PaymentController extends GetxController {
   Future<void> actionRequestPayment({
     required int amount,
     required String orderName,
+    required String customerName,
+    required String customerEmail,
+    required String uniqueOrderId,
   }) async {
     try {
-      final String uniqueOrderId =
-          "order_${DateTime.now().millisecondsSinceEpoch}";
+      // final String uniqueOrderId = "order_${DateTime.now().millisecondsSinceEpoch}";
 
       // 1. 토스 결제창 실행
       final paymentResult = await paymentWidget.requestPayment(
         paymentInfo: PaymentInfo(
           orderId: uniqueOrderId, // 필수: 가맹점에서 생성한 고유 주문번호
           orderName: orderName, // 필수: 결제할 상품명
-          //customerEmail: "user@email.com", // 선택: 구매자 이메일
-          //customerName: "홍길동",         // 선택: 구매자 이름
+          customerEmail: customerEmail, // 선택: 구매자 이메일
+          customerName: customerName, // 선택: 구매자 이름
           appScheme: 'mymamapp://', // 선택: 앱 복귀용 스킴
         ),
       );

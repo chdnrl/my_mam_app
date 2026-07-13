@@ -27,11 +27,7 @@ class SubCode {
   Map<String, dynamic> toJson() => {"code": code, "name": name, "ename": ename};
 
   SubCode copyWith({String? code, String? name, String? ename}) {
-    return SubCode(
-      code: code ?? this.code,
-      name: name ?? this.name,
-      ename: ename ?? this.ename,
-    );
+    return SubCode(code: code ?? this.code, name: name ?? this.name, ename: ename ?? this.ename);
   }
 }
 
@@ -49,6 +45,7 @@ class UserInfo {
   // 🛠️ 변경 및 추가: 객체 지향적 관리를 위한 SubCode 타입 적용
   SubCode gender;
   SubCode userType;
+  SubCode authStatus;
 
   String fromInvitationCode;
   String avatar;
@@ -90,6 +87,7 @@ class UserInfo {
     this.sysCid = "",
     this.invitationCode = "",
     this.custCode = "",
+    required this.authStatus,
   });
 
   static final UserInfo mock = UserInfo(
@@ -114,6 +112,7 @@ class UserInfo {
     birthYear: '1994',
     birthMonth: '12',
     birthDay: '20',
+    authStatus: SubCode(code: "1", name: "인증완료", ename: "Authenticated"),
   );
 
   factory UserInfo.fromJSON(Map<String, dynamic> json) {
@@ -146,6 +145,7 @@ class UserInfo {
         custCode: "",
         address: "",
         babyName: "",
+        authStatus: SubCode(),
       );
     }
 
@@ -157,14 +157,10 @@ class UserInfo {
 
       if (payloadMap.containsKey("currentUserInfo")) {
         final curData = payloadMap["currentUserInfo"];
-        targetJson = (curData is List && curData.isNotEmpty)
-            ? curData[0]
-            : (curData is Map ? curData : payloadMap);
+        targetJson = (curData is List && curData.isNotEmpty) ? curData[0] : (curData is Map ? curData : payloadMap);
       } else if (payloadMap.containsKey("userInfo")) {
         final uData = payloadMap["userInfo"];
-        targetJson = (uData is List && uData.isNotEmpty)
-            ? uData[0]
-            : (uData is Map ? uData : payloadMap);
+        targetJson = (uData is List && uData.isNotEmpty) ? uData[0] : (uData is Map ? uData : payloadMap);
       } else if (payloadMap.containsKey("user")) {
         final userData = payloadMap["user"];
         targetJson = (userData is List && userData.isNotEmpty)
@@ -173,8 +169,7 @@ class UserInfo {
       } else {
         targetJson = payloadMap;
       }
-    } else if (json.containsKey("currentUserInfo") &&
-        json["currentUserInfo"] is Map) {
+    } else if (json.containsKey("currentUserInfo") && json["currentUserInfo"] is Map) {
       targetJson = json["currentUserInfo"];
     } else if (json.containsKey("userInfo") && json["userInfo"] is Map) {
       targetJson = json["userInfo"];
@@ -193,6 +188,7 @@ class UserInfo {
     // 🛠️ [핵심 보강] 중첩 객체 구조 파싱을 SubCode 연동형식으로 이관
     SubCode parsedGender = SubCode.fromJSON(targetJson["gender"]);
     SubCode parsedUserType = SubCode.fromJSON(targetJson["userType"]);
+    SubCode parsedAuthStatus = SubCode.fromJSON(targetJson["authStatus"]);
 
     return UserInfo(
       id: targetJson["id"]?.toString() ?? "",
@@ -201,8 +197,7 @@ class UserInfo {
       telephone: targetJson["telephone"] ?? "",
       birthday: bDay,
       birthYear: targetJson["birthYear"] ?? (parts.isNotEmpty ? parts[0] : ""),
-      birthMonth:
-          targetJson["birthMonth"] ?? (parts.length > 1 ? parts[1] : ""),
+      birthMonth: targetJson["birthMonth"] ?? (parts.length > 1 ? parts[1] : ""),
       birthDay: targetJson["birthDay"] ?? (parts.length > 2 ? parts[2] : ""),
       estimatedDueDate: targetJson["estimatedDueDate"] ?? "",
       fileId: targetJson["fileId"] ?? "",
@@ -220,6 +215,7 @@ class UserInfo {
       token: targetJson["token"] ?? "",
       myChild: targetJson["myChild"] ?? "",
       password: rawPassword,
+      authStatus: parsedAuthStatus,
     );
   }
 
@@ -241,6 +237,7 @@ class UserInfo {
     "birthYear": birthYear,
     "birthMonth": birthMonth,
     "birthDay": birthDay,
+    "authStatus": authStatus.toJson(),
   };
 
   UserInfo copyWith({
@@ -261,6 +258,7 @@ class UserInfo {
     SubCode? userType,
     String? fromInvitationCode,
     String? token,
+    SubCode? authStatus,
   }) {
     return UserInfo(
       userId: this.userId,
@@ -287,6 +285,7 @@ class UserInfo {
       sysCid: this.sysCid,
       invitationCode: this.invitationCode,
       custCode: this.custCode,
+      authStatus: authStatus ?? this.authStatus,
     );
   }
 }

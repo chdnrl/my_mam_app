@@ -19,7 +19,7 @@ class ContractApi {
   /// 🎯 1. 전체 역사 계약서 목록 조회 (GET)
   static Future<List<ContractModel>> fetchHistoryContracts() async {
     const String qparamValue =
-        "historyMaternalContract{id,maternalUserId,contractId,resId,gid,pid,sdate,edate,period,contractDoc,cfDate,ctDate,sysCid,idate,totalMoney,status,curVer,customerCode,customerName,birth,contractDate,roomId,roomNo,roomLevel,roomLevelName,onlineDocId,signType,payStatus,signStatus,payAccount,mobilePhone,email,pmSrv,ctype,signReqUid,discAmt,signName,sreqId,memo,rPaidAmt,aesthPaidAmt,retAmt}";
+        "{historyMaternalContract{id,maternalUserId,contractId,resId,gid,pid,sdate,edate,period,contractDoc,cfDate,ctDate,sysCid,idate,totalMoney,status,curVer,customerCode,customerName,birth,contractDate,roomId,roomNo,roomLevel,roomLevelName,onlineDocId,signType,payStatus,signStatus,payAccount,mobilePhone,email,pmSrv,ctype,signReqUid,discAmt,signName,sreqId,memo,rPaidAmt,aesthPaidAmt,retAmt}}";
 
     final String pureEndpoint = "${GlobalConstants.BASE_URL}${HttpConstants.ACTIVATED_CONTRACTS}";
 
@@ -104,7 +104,7 @@ class ContractApi {
   /// 🎯 3. 이미 활성화된 현재의 계약 정보 조회 (GET)
   static Future<ContractModel?> fetchActiveContract() async {
     const String qparamValue =
-        "bindMaternalContract{id,maternalUserId,contractId,resId,gid,pid,sdate,edate,period,contractDoc,cfDate,ctDate,sysCid,idate,totalMoney,status,curVer,customerCode,customerName,birth,contractDate,roomId,roomNo,roomLevel,roomLevelName,onlineDocId,signType,payStatus,signStatus,payAccount,mobilePhone,email,pmSrv,ctype,signReqUid,discAmt,signName,sreqId,memo,rPaidAmt,aesthPaidAmt,retAmt,activateDt}";
+        "{bindMaternalContract{id,maternalUserId,contractId,resId,gid,pid,sdate,edate,period,contractDoc,cfDate,ctDate,sysCid,idate,totalMoney,status,curVer,customerCode,customerName,birth,contractDate,roomId,roomNo,roomLevel,roomLevelName,onlineDocId,signType,payStatus,signStatus,payAccount,mobilePhone,email,pmSrv,ctype,signReqUid,discAmt,signName,sreqId,memo,rPaidAmt,aesthPaidAmt,retAmt,activateDt}}";
 
     final String pureEndpoint = "${GlobalConstants.BASE_URL}${HttpConstants.ACTIVATED_CONTRACTS}";
 
@@ -146,6 +146,29 @@ class ContractApi {
       return null;
     } catch (e) {
       print("❌ [활성화된 계약 조회 자체 치명적 에러]: $e");
+      return null;
+    }
+  }
+
+  /// 🎯 4. 계약서 파일 상세 경로 및 파일명 조회 (GET)
+  static Future<ContractFileModel?> fetchContractFile(String fid) async {
+    final String pureEndpoint = "${GlobalConstants.BASE_URL}/account/contractFile";
+    final Uri finalizedUri = Uri.parse(pureEndpoint).replace(queryParameters: {"fid": fid});
+
+    try {
+      final options = await _getAuthOptions();
+      final response = await dioRequest.get(finalizedUri.toString(), options: options);
+      final dynamic responseData = (response is Response) ? response.data : response;
+
+      print("🎉 [계약서 파일 상세 조회 성공 데이터]: $responseData");
+
+      // 💡 핵심 수정: 최상위 구조가 바로 Map이므로 응답을 곧바로 파싱합니다.
+      if (responseData is Map<String, dynamic>) {
+        return ContractFileModel.fromJSON(responseData);
+      }
+      return null;
+    } catch (e) {
+      print("❌ [계약서 파일 상세 조회 치명적 에러]: $e");
       return null;
     }
   }

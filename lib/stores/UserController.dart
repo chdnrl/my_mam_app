@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:my_mam_app/api/user.dart';
 import 'package:my_mam_app/stores/TokenManager.dart';
 import 'package:my_mam_app/utils/DioRequest.dart';
+import 'package:my_mam_app/utils/ToastUtils.dart';
 import 'package:my_mam_app/viewmodels/user.dart';
 
 // class UserController extends GetxController {
@@ -68,6 +69,12 @@ class UserController extends GetxController {
 
       // 리액티브 변수에 담아 화면단(Obx) 단체 자동 새로고침 유도
       userInfo.value = serverData;
+      if (userInfo.value!.userType.code == '2') {
+        isFamilyUser.value = true;
+      }
+      if (userInfo.value!.authStatus.code == '1') {
+        isAuthenticated.value = true;
+      }
       print("🎉 [UserController] 회원 상세 데이터 캐싱 완료: ${serverData.userId}");
     } catch (e) {
       print("❌ [UserController] 유저 정보 수신 오류 계통 인지: $e");
@@ -107,21 +114,21 @@ class UserController extends GetxController {
   }
 
   /// 🎯 비밀번호 변경 비즈니스 링커
-  Future<bool> updatePassword({required String oldPassword, required String newPassword}) async {
-    try {
-      isLoading.value = true;
+  // Future<bool> updatePassword({required String oldPassword, required String newPassword}) async {
+  //   try {
+  //     isLoading.value = true;
 
-      // 비밀번호 전용 트랜잭션 API 실행
-      bool isSuccess = await updateUserPasswordAPI(oldPassword: oldPassword, newPassword: newPassword);
+  //     // 비밀번호 전용 트랜잭션 API 실행
+  //     bool isSuccess = await updateUserPasswordAPI(oldPassword: oldPassword, newPassword: newPassword);
 
-      return isSuccess;
-    } catch (e) {
-      print("❌ 비밀번호 변경 에러 계통 인지: $e");
-      return false;
-    } finally {
-      isLoading.value = false;
-    }
-  }
+  //     return isSuccess;
+  //   } catch (e) {
+  //     print("❌ 비밀번호 변경 에러 계통 인지: $e");
+  //     return false;
+  //   } finally {
+  //     isLoading.value = false;
+  //   }
+  // }
 
   /// 🎯 [비즈니스 링커 수정] 서버 로그아웃 API 연동 처리
   Future<bool> handleServerLogout() async {
@@ -150,51 +157,146 @@ class UserController extends GetxController {
     }
   }
 
-  /// 🤰 [신규] 산모 인증 트랜잭션 비즈니스 링커
+  /// 🤰 [수정] 산모 인증 트랜잭션 비즈니스 링커
+  /// 🤰 [최종 수정] 산모 인증 트랜잭션 비즈니스 링커
   Future<bool> handleMaternalAuth(String certCode) async {
     try {
       isLoading.value = true;
-      bool isSuccess = await certifyMaternalAPI(certCode);
 
-      if (isSuccess) {
+      Map<String, dynamic> response = await certifyMaternalAPI(certCode);
+
+      String status = response['status']?.toString() ?? 'SERVER_ERROR';
+      String? message = response['message']?.toString();
+
+      // 💡 [수정] Get.context! 대신 완전히 무결하고 안전한 Get.overlayContext를 사용합니다.
+      if (Get.overlayContext != null) {
+        ToastUtils.showServerResponseSnackBar(Get.overlayContext!, status: status, serverMessage: message);
+      }
+
+      if (status == '200') {
         isAuthenticated.value = true;
         isFamilyUser.value = false;
-        showGiftIcon.value = false; // 산모는 선물 수령자이므로 선물 아이콘 미노출(기존 UI 설계 기준)
-
-        // 인증 성공 후 필요 시 최신 유저 정보를 서버에서 다시 긁어옵니다.
+        showGiftIcon.value = false;
         await fetchUserInfo();
+        return true;
       }
-      return isSuccess;
+      return false;
     } catch (e) {
-      print("❌ [UserController] 산모 인증 프로세스 에러: $e");
+      print("❌ [UserController] 최종 예외처리 블록 유입: $e");
+      if (Get.overlayContext != null) {
+        ToastUtils.showServerResponseSnackBar(
+          Get.overlayContext!,
+          status: 'SERVER_ERROR',
+          serverMessage: '처리 중 에러가 발생했습니다.',
+        );
+      }
       return false;
     } finally {
       isLoading.value = false;
     }
   }
 
-  /// 👨‍👩‍👧‍👦 [신규] 가족 모드 인증 트랜잭션 비즈니스 링커
+  /// 👨‍👩‍👧‍👦 [수정] 가족 모드 인증 트랜잭션 비즈니스 링커
   Future<bool> handleFamilyAuth(String inviteCode) async {
     try {
       isLoading.value = true;
-      bool isSuccess = await acceptFamilyInvitationAPI(inviteCode);
 
-      if (isSuccess) {
+      Map<String, dynamic> response = await acceptFamilyInvitationAPI(inviteCode);
+
+      String status = response['status']?.toString() ?? 'SERVER_ERROR';
+      String? message = response['message']?.toString();
+
+      // 💡 공통 스낵바 출력
+      ToastUtils.showServerResponseSnackBar(Get.context!, status: status, serverMessage: message);
+
+      if (status == '200') {
         isAuthenticated.value = true;
         isFamilyUser.value = true;
-        showGiftIcon.value = true; // 가족 유저일 때만 선물함 아이콘 활성화
-
-        // 인증 성공 후 가족 유저 데이터 갱신
+        showGiftIcon.value = true;
         await fetchUserInfo();
+        return true; // 👈 [추가] 화면 Widget을 위해 true 반환
       }
-      return isSuccess;
+      return false; // 👈 [추가] 실패 시 false 반환
     } catch (e) {
       print("❌ [UserController] 가족 인증 프로세스 에러: $e");
+      ToastUtils.showServerResponseSnackBar(Get.context!, status: 'SERVER_ERROR', serverMessage: '통신 중 에러가 발생했습니다.');
       return false;
     } finally {
       isLoading.value = false;
     }
   }
+
+  /// 🎯 [수정] 비밀번호 변경 비즈니스 링커
+  Future<bool> updatePassword({required String oldPassword, required String newPassword}) async {
+    try {
+      isLoading.value = true;
+
+      Map<String, dynamic> response = await updateUserPasswordAPI(oldPassword: oldPassword, newPassword: newPassword);
+
+      String status = response['status']?.toString() ?? 'SERVER_ERROR';
+      String? message = response['message']?.toString();
+
+      // 💡 공통 스낵바 출력
+      ToastUtils.showServerResponseSnackBar(Get.context!, status: status, serverMessage: message);
+
+      if (status == '200') {
+        return true; // 👈 [추가] 성공 시 true 반환
+      }
+      return false; // 👈 [추가] 실패 시 false 반환
+    } catch (e) {
+      print("❌ 비밀번호 변경 에러 계통 인지: $e");
+      ToastUtils.showServerResponseSnackBar(Get.context!, status: 'SERVER_ERROR', serverMessage: '통신 중 에러가 발생했습니다.');
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// 🤰 [신규] 산모 인증 트랜잭션 비즈니스 링커
+  // Future<bool> handleMaternalAuth(String certCode) async {
+  //   try {
+  //     isLoading.value = true;
+  //     bool isSuccess = await certifyMaternalAPI(certCode);
+
+  //     if (isSuccess) {
+  //       isAuthenticated.value = true;
+  //       isFamilyUser.value = false;
+  //       showGiftIcon.value = false; // 산모는 선물 수령자이므로 선물 아이콘 미노출(기존 UI 설계 기준)
+
+  //       // 인증 성공 후 필요 시 최신 유저 정보를 서버에서 다시 긁어옵니다.
+  //       await fetchUserInfo();
+  //     }
+  //     return isSuccess;
+  //   } catch (e) {
+  //     print("❌ [UserController] 산모 인증 프로세스 에러: $e");
+  //     return false;
+  //   } finally {
+  //     isLoading.value = false;
+  //   }
+  // }
+
+  /// 👨‍👩‍👧‍👦 [신규] 가족 모드 인증 트랜잭션 비즈니스 링커
+  // Future<bool> handleFamilyAuth(String inviteCode) async {
+  //   try {
+  //     isLoading.value = true;
+  //     bool isSuccess = await acceptFamilyInvitationAPI(inviteCode);
+
+  //     if (isSuccess) {
+  //       isAuthenticated.value = true;
+  //       isFamilyUser.value = true;
+  //       showGiftIcon.value = true; // 가족 유저일 때만 선물함 아이콘 활성화
+
+  //       // 인증 성공 후 가족 유저 데이터 갱신
+  //       await fetchUserInfo();
+  //     }
+  //     return isSuccess;
+  //   } catch (e) {
+  //     print("❌ [UserController] 가족 인증 프로세스 에러: $e");
+  //     return false;
+  //   } finally {
+  //     isLoading.value = false;
+  //   }
+  // }
 
   /// ⏳ [화면 진입 시 실행] 코드를 가져오는 가상 함수 (향후 API 개발 시 교체)
   Future<void> fetchInitialInviteCode() async {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:my_mam_app/stores/ContractController.dart';
 // 💡UserController 및 필요한 페이지들의 실제 위치에 맞게 import 경로를 확인해 주세요.
 import 'package:my_mam_app/stores/UserController.dart';
 import 'package:my_mam_app/utils/ToastUtils.dart';
@@ -74,9 +75,9 @@ class _SideMenuWidgetState extends State<SideMenuWidget> {
       ),
       MenuItemData(title: "스마트 크래들 보기", imagePath: "lib/assets/contact_Icon.png", target: "/smartCradlePage"),
       if (!_userController.isFamilyUser.value)
-        MenuItemData(title: "가족모드 관리", imagePath: "lib/assets/contact_Icon.png", target: "/familyManagementPage"),
+        MenuItemData(title: "가족모드 관리", imagePath: "lib/assets/users_2.png", target: "/familyManagementPage"),
       if (!_userController.isFamilyUser.value)
-        MenuItemData(title: "내 청구서 목록", imagePath: "lib/assets/invoice_Icon.png", target: "/invoiceListPage"),
+        MenuItemData(title: "내 청구서 목록", imagePath: "lib/assets/invoice_Icon1.png", target: "/invoiceListPage"),
       if (!_userController.isFamilyUser.value)
         MenuItemData(title: "산후조리원 정보", imagePath: "lib/assets/school_Icon.png", target: "/careCenterDetailPage"),
     ],
@@ -174,7 +175,7 @@ class _SideMenuWidgetState extends State<SideMenuWidget> {
                     _buildMenuTile(
                       title: "메인",
                       imagePath: "lib/assets/home_Icon.png",
-                      target: isAuthenticated ? "termsAgree" : "/authScreen",
+                      target: isAuthenticated ? "/home" : "/authScreen",
                     ),
 
                     // 현재 유저 상태에 맞는 동적 메뉴 타일들을 자동으로 매핑 및 출력합니다.
@@ -198,7 +199,7 @@ class _SideMenuWidgetState extends State<SideMenuWidget> {
               if (!isFamilyUser && isAuthenticated)
                 _buildMenuTile(
                   title: "전체 계약서 목록",
-                  imagePath: "lib/assets/contact_Icon.png",
+                  imagePath: "lib/assets/invoice_Icon.png",
                   target: '/contractListPage',
                 ),
 
@@ -311,19 +312,36 @@ class _SideMenuWidgetState extends State<SideMenuWidget> {
         if (target is String) {
           if (target == "/myInfoPage") {
             Get.toNamed(target, arguments: {"isFamilyUser": _userController.isFamilyUser.value});
-          } else if (target == "/contractPdfPage") {
+          }
+          // 🤰 [핵심 가동] 계약서 보기 클릭 시 라우팅 가공 및 인스턴스 안전 장치
+          else if (target == "/contractPdfPage") {
+            // ① 메모리에 ContractController가 등록되어 있는지 체크 후 없으면 주입(put)
+            if (!Get.isRegistered<ContractController>()) {
+              Get.put(ContractController());
+            }
+
+            // ② 주입되거나 찾아온 컨트롤러를 획득합니다.
+            final contractCtrl = Get.find<ContractController>();
+
+            // ③ 활성화된 계약 정보 객체 추출
+            final activeInfo = contractCtrl.activeContract.value;
+
+            // 만약 현재 로드된 정보가 없다면 방어코드용 기본 빈 값 배치
+            String currentFid = activeInfo?.contractDoc ?? "";
+
             Get.toNamed(
               target,
               arguments: {
-                "pdfUrl": 'https://cdn.syncfusion.com/content/PDFViewer/flutter-succinctly.pdf',
-                "pdfName": '궁 산후조리원.pdf',
+                "fid": currentFid, // 👈 우리가 수정한 API 스펙의 핵심인 fid 전달!
+                "pdfUrl": currentFid, // 백업용 방어 코드
+                "pdfName": activeInfo != null ? "${activeInfo.customerName}님 계약서" : "내 계약서",
               },
             );
           } else {
             Get.toNamed(target);
           }
         }
-        // 4. 원본 파일 형태처럼 Widget 인스턴스가 직접 매개변수로 들어왔을 경우 하이브리드 지원
+        // 4. Widget 인스턴스가 직접 매개변수로 들어왔을 경우 하이브리드 지원
         else if (target is Widget) {
           Navigator.push(context, MaterialPageRoute(builder: (context) => target));
         }

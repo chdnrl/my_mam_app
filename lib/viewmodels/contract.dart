@@ -120,10 +120,10 @@ class ContractModel {
 
     return ContractModel(
       id: targetJson["id"]?.toString() ?? "",
-      maternalUserId: targetJson["maternalUserId"]?.toString() ?? "", // 추가
-      contractId: targetJson["contractId"]?.toString() ?? "", // 추가
+      maternalUserId: targetJson["maternalUserId"]?.toString() ?? "",
+      contractId: targetJson["contractId"]?.toString() ?? "",
       resId: targetJson["resId"]?.toString() ?? "",
-      gid: targetJson["gid"]?.toString() ?? "", // 추가
+      gid: targetJson["gid"]?.toString() ?? "",
       pid: targetJson["pid"]?.toString() ?? "",
       sdate: targetJson["sdate"] ?? "",
       edate: targetJson["edate"] ?? "",
@@ -131,11 +131,14 @@ class ContractModel {
       contractDoc: targetJson["contractDoc"] ?? "",
       cfDate: targetJson["cfDate"] ?? "",
       ctDate: targetJson["ctDate"] ?? "",
-      sysCid: targetJson["sysCid"]?.toString() ?? "", // 추가
+      sysCid: targetJson["sysCid"]?.toString() ?? "",
       idate: targetJson["idate"] ?? "",
       totalMoney: parseMoney(targetJson["totalMoney"]),
-      status: targetJson["status"] ?? "",
-      curVer: targetJson["curVer"]?.toString() ?? "", // 추가
+
+      // 🛠️ 1. status 변환 방어 (서버에서 숫자 3이 내려옴)
+      status: targetJson["status"]?.toString() ?? "",
+
+      curVer: targetJson["curVer"]?.toString() ?? "",
       customerCode: targetJson["customerCode"] ?? "",
       customerName: targetJson["customerName"] ?? "",
       birth: targetJson["birth"] ?? "",
@@ -145,9 +148,16 @@ class ContractModel {
       roomLevel: targetJson["roomLevel"]?.toString() ?? "",
       roomLevelName: targetJson["roomLevelName"] ?? "일반실",
       onlineDocId: targetJson["onlineDocId"] ?? "",
-      signType: targetJson["signType"] ?? "",
-      payStatus: targetJson["payStatus"] ?? "",
-      signStatus: targetJson["signStatus"] ?? "",
+
+      // 🛠️ 2. signType 변환 방어 (서버에서 숫자 0이 내려옴)
+      signType: targetJson["signType"]?.toString() ?? "",
+
+      // 🛠️ 3. payStatus 변환 방어 (서버에서 숫자 1이 내려옴)
+      payStatus: targetJson["payStatus"]?.toString() ?? "",
+
+      // 🛠️ 4. signStatus 변환 방어 (서버에서 숫자 5이 내려옴)
+      signStatus: targetJson["signStatus"]?.toString() ?? "",
+
       payAccount: targetJson["payAccount"] ?? "",
       mobilePhone: targetJson["mobilePhone"] ?? "",
       email: targetJson["email"] ?? "",
@@ -156,14 +166,48 @@ class ContractModel {
       signReqUid: targetJson["signReqUid"] ?? "",
       discAmt: targetJson["discAmt"]?.toString() ?? "0",
       signName: targetJson["signName"] ?? "",
-      sreqId: targetJson["sreqId"] ?? "",
+
+      // 🛠️ 5. sreqId 변환 방어 (서버에서 숫자 0이 내려옴)
+      sreqId: targetJson["sreqId"]?.toString() ?? "",
+
       memo: targetJson["memo"] ?? "",
       activateDt: targetJson["activateDt"],
       rPaidAmt: targetJson["rPaidAmt"]?.toString(),
       aesthPaidAmt: targetJson["aesthPaidAmt"]?.toString(),
       retAmt: targetJson["retAmt"]?.toString(),
-      isCurrentIn: targetJson["status"] == "ACTIVATED" || targetJson["activateDt"] != null,
+
+      // status가 String("3")으로 변환되었으므로 비교 연산도 알맞게 대응하거나 activateDt 유무로 판단하도록 유지합니다.
+      isCurrentIn: targetJson["status"]?.toString() == "ACTIVATED" || targetJson["activateDt"] != null,
       isSelected: false,
+    );
+  }
+}
+
+class ContractFileModel {
+  final String url;
+  final String fullUri;
+  final String fname;
+  final String mimeType;
+  final int size;
+  final String ofileName;
+
+  ContractFileModel({
+    required this.url,
+    required this.fullUri,
+    required this.fname,
+    required this.mimeType,
+    required this.size,
+    required this.ofileName,
+  });
+
+  factory ContractFileModel.fromJSON(Map<String, dynamic> json) {
+    return ContractFileModel(
+      url: json["url"]?.toString() ?? "",
+      fullUri: json["fullUri"]?.toString() ?? "",
+      fname: json["fname"]?.toString() ?? "계약서 파일",
+      mimeType: json["mimeType"]?.toString() ?? "",
+      size: json["size"] is int ? json["size"] : (int.tryParse(json["size"]?.toString() ?? "0") ?? 0),
+      ofileName: json["ofileName"]?.toString() ?? "",
     );
   }
 }

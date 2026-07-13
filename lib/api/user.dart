@@ -94,7 +94,7 @@ Future<UserInfo> getUserInfoAPI() async {
   final String pureEndpoint = "${GlobalConstants.BASE_URL}${HttpConstants.USER_PROFILE}";
 
   final String rawQuery =
-      '{currentUserInfo{id,userId,userName,telephone,gender{code,name,ename},userType{code,name,ename},birthday,estimatedDueDate,fileId,address,createDt,updateDt}}';
+      '{currentUserInfo{id,userId,userName,telephone,gender{code,name,ename},userType{code,name,ename},birthday,estimatedDueDate,fileId,address,authStatus{code,name,ename},createDt,updateDt}}';
 
   final token = await tokenManager.getToken();
   String pureJwt = token.toString().replaceAll("mymam-auth=", "").replaceAll(";", "").trim();
@@ -264,7 +264,27 @@ Future<bool> updateUserInfoAPI(UserInfo userInfo) async {
 }
 
 /// [비밀번호 변경 전용 API]
-Future<bool> updateUserPasswordAPI({required String oldPassword, required String newPassword}) async {
+// Future<bool> updateUserPasswordAPI({required String oldPassword, required String newPassword}) async {
+//   try {
+//     final Map<String, dynamic> commandData = {
+//       "name": "resetUserPw",
+//       "payload": {"oldPassword": oldPassword, "newPassword": newPassword},
+//     };
+
+//     print("🛰️ [API] 비밀번호 변경 요청 전송: [보안상 페이로드 로그 생략]");
+
+//     final options = await _getAuthOptions();
+
+//     final response = await dioRequest.post(HttpConstants.USER_UPDATE, data: commandData, options: options);
+
+//     return response != null;
+//   } catch (e) {
+//     print("❌ 비밀번호 업데이트 API 에러: $e");
+//     return false;
+//   }
+// }
+/// [비밀번호 변경 전용 API]
+Future<Map<String, dynamic>> updateUserPasswordAPI({required String oldPassword, required String newPassword}) async {
   try {
     final Map<String, dynamic> commandData = {
       "name": "resetUserPw",
@@ -274,18 +294,40 @@ Future<bool> updateUserPasswordAPI({required String oldPassword, required String
     print("🛰️ [API] 비밀번호 변경 요청 전송: [보안상 페이로드 로그 생략]");
 
     final options = await _getAuthOptions();
-
     final response = await dioRequest.post(HttpConstants.USER_UPDATE, data: commandData, options: options);
 
-    return response != null;
+    if (response != null && response.data != null) {
+      return response.data as Map<String, dynamic>;
+    }
+    return {"status": "SUCCESS", "message": "비밀번호가 정상적으로 변경되었습니다."};
   } catch (e) {
     print("❌ 비밀번호 업데이트 API 에러: $e");
-    return false;
+    return {"status": "SERVER_ERROR", "message": "통신 중 오류가 발생했습니다."};
   }
 }
 
 /// 🤰 산모 신원 인증 API
-Future<bool> certifyMaternalAPI(String certCode) async {
+// Future<bool> certifyMaternalAPI(String certCode) async {
+//   try {
+//     final Map<String, dynamic> commandData = {
+//       "name": "UserCertifyMaternal",
+//       "payload": {"certCode": certCode},
+//     };
+
+//     print("🚀 [API] 산모 인증 요청 전송: $commandData");
+
+//     final options = await _getAuthOptions();
+
+//     final response = await dioRequest.post(HttpConstants.USER_UPDATE, data: commandData, options: options);
+
+//     return response != null;
+//   } catch (e) {
+//     print("❌ [API] 산모 인증 백엔드 통신 오류: $e");
+//     return false;
+//   }
+// }
+/// 🤰 산모 신원 인증 API
+Future<Map<String, dynamic>> certifyMaternalAPI(String certCode) async {
   try {
     final Map<String, dynamic> commandData = {
       "name": "UserCertifyMaternal",
@@ -295,18 +337,71 @@ Future<bool> certifyMaternalAPI(String certCode) async {
     print("🚀 [API] 산모 인증 요청 전송: $commandData");
 
     final options = await _getAuthOptions();
-
     final response = await dioRequest.post(HttpConstants.USER_UPDATE, data: commandData, options: options);
 
-    return response != null;
+    if (response != null && response.data != null) {
+      return response.data as Map<String, dynamic>;
+    }
+    return {"status": "SUCCESS", "message": "산모 인증이 완료되었습니다."};
   } catch (e) {
     print("❌ [API] 산모 인증 백엔드 통신 오류: $e");
-    return false;
+
+    if (e is DioException) {
+      final Response? errorResponse = e.response;
+
+      // 케이스 A: 서버 응답 데이터가 데이터 주머니에 정상적으로 들어있을 때
+      if (errorResponse != null && errorResponse.data != null) {
+        final data = errorResponse.data;
+        if (data is Map) {
+          return Map<String, dynamic>.from(data);
+        } else if (data is String) {
+          return {"status": "400", "message": data};
+        }
+      }
+      // 케이스 B: 🎯 [현재 상태] 에러 데이터 주머니는 비어있지만, 에러 원문(e.message 또는 e.toString())에 자바 메시지가 찍혀있을 때
+      else {
+        // 콘솔에 찍힌 "DioException [unknown]: 자바메시지"에서 메시지만 추출합니다.
+        String rawError = e.toString();
+        String cleanMessage = '요청 처리 중 오류가 발생했습니다.';
+
+        if (rawError.contains(']: ')) {
+          cleanMessage = rawError.split(']: ').last.trim();
+        } else if (e.message != null && e.message!.isNotEmpty) {
+          cleanMessage = e.message!;
+        }
+
+        print("🎯 [파싱 성공 원문 메시지]: $cleanMessage");
+        // 자바 서버가 준 400 에러 구조로 강제 조립하여 컨트롤러로 토스합니다.
+        return {"status": "400", "message": cleanMessage};
+      }
+    }
+
+    return {"status": "SERVER_ERROR", "message": "통신 중 오류가 발생했습니다."};
   }
 }
 
 /// 👨‍👩‍👧‍👦 가족 초대 수락 인증 API
-Future<bool> acceptFamilyInvitationAPI(String inviteCode) async {
+// Future<bool> acceptFamilyInvitationAPI(String inviteCode) async {
+//   try {
+//     final Map<String, dynamic> commandData = {
+//       "name": "AcceptFamilyInvitation",
+//       "payload": {"inviteCode": inviteCode},
+//     };
+
+//     print("🚀 [API] 가족 초대 수락 요청 전송: $commandData");
+
+//     final options = await _getAuthOptions();
+
+//     final response = await dioRequest.post(HttpConstants.USER_UPDATE, data: commandData, options: options);
+
+//     return response != null;
+//   } catch (e) {
+//     print("❌ [API] 가족 초대 수락 백엔드 통신 오류: $e");
+//     return false;
+//   }
+// }
+/// 👨‍👩‍👧‍👦 가족 초대 수락 인증 API
+Future<Map<String, dynamic>> acceptFamilyInvitationAPI(String inviteCode) async {
   try {
     final Map<String, dynamic> commandData = {
       "name": "AcceptFamilyInvitation",
@@ -316,13 +411,15 @@ Future<bool> acceptFamilyInvitationAPI(String inviteCode) async {
     print("🚀 [API] 가족 초대 수락 요청 전송: $commandData");
 
     final options = await _getAuthOptions();
-
     final response = await dioRequest.post(HttpConstants.USER_UPDATE, data: commandData, options: options);
 
-    return response != null;
+    if (response != null && response.data != null) {
+      return response.data as Map<String, dynamic>;
+    }
+    return {"status": "SUCCESS", "message": "가족 초대 수락이 완료되었습니다."};
   } catch (e) {
     print("❌ [API] 가족 초대 수락 백엔드 통신 오류: $e");
-    return false;
+    return {"status": "SERVER_ERROR", "message": "통신 중 오류가 발생했습니다."};
   }
 }
 

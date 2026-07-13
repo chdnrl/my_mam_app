@@ -32,6 +32,7 @@ class _MainPageState extends State<MainPage> {
 
   // GetX UserController 싱글톤 인스턴스 연결
   final UserController _userController = UserController.to;
+  final ContractController _contractController = Get.put(ContractController());
   // 푸터 펼침 상태 관리 변수
   bool _isFooterExpanded = false;
 
@@ -249,7 +250,7 @@ class _MainPageState extends State<MainPage> {
   // ===========================================================================
   Widget _buildMainContent() {
     // 💡 분리된 ContractController 인스턴스를 초기화 혹은 탐색합니다.
-    final ContractController contractController = Get.put(ContractController());
+    //final ContractController contractController = Get.put(ContractController());
     bool shouldDim = currentStatus == ContractStatus.pre || currentStatus == ContractStatus.completed;
 
     // 1. 본문에 들어갈 아이템들을 순서대로 적재할 리스트 생성
@@ -266,7 +267,7 @@ class _MainPageState extends State<MainPage> {
     if (!_userController.isFamilyUser.value) {
       // 🤰 [산모 모드 레이아웃]
       // [2] 고정 보라색 카드 추가
-      bodyItems.add(_buildFixedPurpleCard(contractController));
+      bodyItems.add(_buildFixedPurpleCard(_contractController));
 
       // [3] 스마트 크래들 목록 루프 생성
       for (var cradle in babyCradleData) {
@@ -278,8 +279,16 @@ class _MainPageState extends State<MainPage> {
         );
       }
 
-      // [4] 가족 초대 카드 추가
-      bodyItems.add(_buildFamilyInviteCard({"title": "MYMAM 가족 초대하기", "subtitle": "스마트 크래들 화면 공유"}));
+      /// [4] 가족 초대 카드 추가 (💡 스마트 크래들과 동일하게 shouldDim 상태 적용)
+      bodyItems.add(
+        AbsorbPointer(
+          absorbing: shouldDim, // true일 때 하위 위젯의 모든 터치/클릭 이벤트 차단
+          child: Opacity(
+            opacity: shouldDim ? 0.5 : 1.0, // true일 때 반투명(0.5) 처리
+            child: _buildFamilyInviteCard({"title": "MYMAM 가족 초대하기", "subtitle": "스마트 크래들 화면 공유"}),
+          ),
+        ),
+      );
     } else {
       // 👨‍👩‍👧‍👦 [가족 모드 레이아웃]
       // [2] 가족 모드 전용 스마트 크래들 목록 루프 생성
@@ -444,15 +453,28 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
+  // Widget _buildFixedPurpleCard(ContractController contractController) {
+  //   if (currentStatus == ContractStatus.staying) {
+  //     // 2. 현재 활성화되어 바인딩된 계약 데이터가 존재하지 않을 때 예외 UI
+  //     if (contractController.activeContract.value == null) {
+  //       return _buildNoContractStayingCard();
+  //     }
+  //     return _buildContractStayingCard(contractController);
+  //   } else {
+  //     return _buildContractInfoCard(contractController);
+  //   }
+  // }
   Widget _buildFixedPurpleCard(ContractController contractController) {
+    // 💡 [최상위 방어벽] 아직 서버로부터 계약 정보를 로드하지 못했다면 에러를 내지 않고
+    // 기본 디폴트 폼인 _buildNoContractStayingCard를 띄워 자연스러운 빌드를 유도합니다.
+    if (contractController.activeContract.value == null) {
+      return _buildNoContractStayingCard();
+    }
+
     if (currentStatus == ContractStatus.staying) {
-      // 2. 현재 활성화되어 바인딩된 계약 데이터가 존재하지 않을 때 예외 UI
-      if (contractController.activeContract.value == null) {
-        return _buildNoContractStayingCard();
-      }
       return _buildContractStayingCard(contractController);
     } else {
-      return _buildContractInfoCard();
+      return _buildContractInfoCard(contractController);
     }
   }
 
@@ -487,10 +509,7 @@ class _MainPageState extends State<MainPage> {
             ],
           ),
           const SizedBox(height: 10),
-          _buildContractCardFooter(
-            "2025.05.18 ~ 2025.06.01",
-            "https://cdn.syncfusion.com/content/PDFViewer/flutter-succinctly.pdf",
-          ),
+          _buildContractCardFooter("2025.05.18 ~ 2025.06.01", ""),
         ],
       ),
     );
@@ -523,7 +542,7 @@ class _MainPageState extends State<MainPage> {
               // 💡 API 데이터 (방 등급, 호실 정보) 전달
               _buildCenterInfoText(
                 topLabel: "산후조리원 퇴실 까지",
-                centerName: contract.centerName, // 가상 게터 "산후조리원" 혹은 서버 데이터
+                centerName: contract.centerName.isEmpty ? "궁 산후조리원" : contract.centerName,
                 roomSpec: "${contract.roomLevelName} ${contract.roomNo}",
               ),
               Row(
@@ -551,7 +570,12 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  Widget _buildContractInfoCard() {
+  //산후조리원 입실전/퇴실후
+  Widget _buildContractInfoCard(ContractController contractController) {
+    final contract = contractController.activeContract.value!;
+    String dateRange = (contract.sdate.isNotEmpty && contract.edate.isNotEmpty)
+        ? "${contract.sdate} ~ ${contract.edate}"
+        : (contract.period.isNotEmpty ? contract.period : "-");
     String statusText = currentStatus == ContractStatus.pre ? "입실 예정" : "이용 완료";
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 15),
@@ -567,7 +591,7 @@ class _MainPageState extends State<MainPage> {
             children: [
               _buildCenterInfoText(
                 topLabel: statusText,
-                centerName: "궁 산후조리원", // 가상 게터 "산후조리원" 혹은 서버 데이터
+                centerName: contract.centerName.isEmpty ? "궁 산후조리원" : contract.centerName,
                 roomSpec: "",
               ),
               Container(
@@ -588,10 +612,7 @@ class _MainPageState extends State<MainPage> {
             children: [
               const Text("계약이 안전하게 체결되었습니다.", style: TextStyle(color: Colors.white70, fontSize: 14)),
               const SizedBox(height: 5),
-              _buildContractCardFooter(
-                "2025.07.10 ~ 2025.07.24",
-                "https://cdn.syncfusion.com/content/PDFViewer/flutter-succinctly.pdf",
-              ),
+              _buildContractCardFooter(dateRange, contract.contractDoc),
             ],
           ),
         ],
@@ -656,7 +677,7 @@ class _MainPageState extends State<MainPage> {
   //     ],
   //   );
   // }
-  /// 📄 [수정] 하단 계약서 다운로드 연동 푸터
+  /// 📄 [수정] 계약서 다운로드 연동
   Widget _buildContractCardFooter(String dateRange, String? contractDocUrl) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -666,12 +687,7 @@ class _MainPageState extends State<MainPage> {
         ElevatedButton(
           onPressed: () => Get.toNamed(
             "/contractPdfPage",
-            arguments: {
-              "pdfUrl": (contractDocUrl != null && contractDocUrl.isNotEmpty)
-                  ? contractDocUrl
-                  : 'https://cdn.syncfusion.com/content/PDFViewer/flutter-succinctly.pdf',
-              "pdfName": '산후조리원_계약서.pdf',
-            },
+            arguments: {"pdfUrl": (contractDocUrl != null && contractDocUrl.isNotEmpty) ? contractDocUrl : ''},
           ),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.white,

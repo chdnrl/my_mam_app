@@ -49,7 +49,7 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  void _handleAuthSubmit(String code, bool isFamilyRequest) async {
+  void _handleAuthSubmit(String code, bool isFamilyRequest, BuildContext dialogContext) async {
     final trimmedCode = code.trim();
 
     if (trimmedCode.isEmpty) {
@@ -184,7 +184,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       Navigator.of(dialogContext).pop();
 
                       // 3️⃣ 확보한 인증 코드로 화면 이동 및 인증 로직을 수행합니다.
-                      _handleAuth(authCode, true, context); // 👈 (주의) 닫혀버린 dialogContext 대신 오리지널 context 전달
+                      _handleAuthSubmit(authCode, true, context); // 👈 (주의) 닫혀버린 dialogContext 대신 오리지널 context 전달
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
@@ -603,86 +603,86 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   // 2 & 3. 메인 화면 카드 렌더링 프레임 공통 위젯
-  Widget _buildAuthCard({
-    required bool isFamily,
-    required String title,
-    required String description,
-    required String hint,
-    required TextEditingController? controller,
-    required VoidCallback onPressed,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(25),
-      decoration: BoxDecoration(color: const Color(0xFF785186), borderRadius: BorderRadius.circular(25)),
-      child: Column(
-        children: [
-          isFamily
-              ? Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset(
-                      "lib/assets/family_card_image.png",
-                      width: 140,
-                      height: 30,
-                      errorBuilder: (c, e, s) => const SizedBox(),
-                    ),
-                    const SizedBox(width: 10),
-                    const Text(
-                      "가족모드",
-                      style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                )
-              : Image.asset(
-                  "lib/assets/logo_imageWight.png",
-                  width: 140,
-                  height: 30,
-                  errorBuilder: (c, e, s) => const SizedBox(),
-                ),
-          const SizedBox(height: 15),
-          Text(
-            description,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white, height: 1.5),
-          ),
-          const Divider(color: Colors.white30, height: 40),
-          if (controller != null) ...[
-            TextField(
-              controller: controller,
-              textAlign: TextAlign.center,
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')), UpperCaseTextFormatter()],
-              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(vertical: 15),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-              ),
-            ),
-            const SizedBox(height: 15),
-          ],
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: onPressed,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF785186),
-                shape: const StadiumBorder(),
-              ),
-              child: Text(
-                title,
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Widget _buildAuthCard({
+  //   required bool isFamily,
+  //   required String title,
+  //   required String description,
+  //   required String hint,
+  //   required TextEditingController? controller,
+  //   required VoidCallback onPressed,
+  // }) {
+  //   return Container(
+  //     padding: const EdgeInsets.all(25),
+  //     decoration: BoxDecoration(color: const Color(0xFF785186), borderRadius: BorderRadius.circular(25)),
+  //     child: Column(
+  //       children: [
+  //         isFamily
+  //             ? Row(
+  //                 mainAxisAlignment: MainAxisAlignment.center,
+  //                 children: [
+  //                   Image.asset(
+  //                     "lib/assets/family_card_image.png",
+  //                     width: 140,
+  //                     height: 30,
+  //                     errorBuilder: (c, e, s) => const SizedBox(),
+  //                   ),
+  //                   const SizedBox(width: 10),
+  //                   const Text(
+  //                     "가족모드",
+  //                     style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+  //                   ),
+  //                 ],
+  //               )
+  //             : Image.asset(
+  //                 "lib/assets/logo_imageWight.png",
+  //                 width: 140,
+  //                 height: 30,
+  //                 errorBuilder: (c, e, s) => const SizedBox(),
+  //               ),
+  //         const SizedBox(height: 15),
+  //         Text(
+  //           description,
+  //           textAlign: TextAlign.center,
+  //           style: const TextStyle(color: Colors.white, height: 1.5),
+  //         ),
+  //         const Divider(color: Colors.white30, height: 40),
+  //         if (controller != null) ...[
+  //           TextField(
+  //             controller: controller,
+  //             textAlign: TextAlign.center,
+  //             inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')), UpperCaseTextFormatter()],
+  //             style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+  //             decoration: InputDecoration(
+  //               hintText: hint,
+  //               hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
+  //               filled: true,
+  //               fillColor: Colors.white,
+  //               contentPadding: const EdgeInsets.symmetric(vertical: 15),
+  //               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+  //             ),
+  //           ),
+  //           const SizedBox(height: 15),
+  //         ],
+  //         SizedBox(
+  //           width: double.infinity,
+  //           height: 50,
+  //           child: ElevatedButton(
+  //             onPressed: onPressed,
+  //             style: ElevatedButton.styleFrom(
+  //               backgroundColor: Colors.white,
+  //               foregroundColor: const Color(0xFF785186),
+  //               shape: const StadiumBorder(),
+  //             ),
+  //             child: Text(
+  //               title,
+  //               style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+  //             ),
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildFamilyCard({required VoidCallback onPressed}) {
     return Container(

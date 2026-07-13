@@ -11,11 +11,15 @@ class ContractController extends GetxController {
   final RxBool isLoading = true.obs;
   final RxBool isContractLoading = true.obs; // 🌟 추가: 홈 화면 전용 로딩 바 상태
 
+  // PDF 상세 파일 정보를 담을 반응형 상태 변수들
+  final Rxn<ContractFileModel> pdfFileData = Rxn<ContractFileModel>();
+  final RxBool isPdfLoading = false.obs;
+
   @override
   void onInit() {
     super.onInit();
     // 컨트롤러 생성 시 역사 목록과 활성화된 계약 정보를 동시에 로드합니다.
-    loadHistoryContracts();
+    // loadHistoryContracts();
     loadActiveContract();
   }
 
@@ -34,10 +38,12 @@ class ContractController extends GetxController {
   Future<void> loadActiveContract() async {
     try {
       isContractLoading.value = true;
+      activeContract.value = null; // 🌟 [안전장치] 이전 데이터 청소
       final result = await ContractApi.fetchActiveContract();
       activeContract.value = result;
     } catch (e) {
       print("❌ [컨트롤러 - 활성화 계약 조회 오류]: $e");
+      activeContract.value = null; // 🌟 에러 시 null 방어
     } finally {
       isContractLoading.value = false;
     }
@@ -90,7 +96,7 @@ class ContractController extends GetxController {
     }
   }
 
-  // 🧮 [🌟 추가 변수] 현재 지나간 입실 일수 계산 (sdate ~ 오늘)
+  // 현재 지나간 입실 일수 계산 (sdate ~ 오늘)
   int get currentStayingDays {
     final contract = activeContract.value;
     if (contract == null || contract.sdate.isEmpty) return 0;
@@ -104,6 +110,24 @@ class ContractController extends GetxController {
       return diff > totalStayingDays ? totalStayingDays : diff; // 최대치 방어
     } catch (_) {
       return 0;
+    }
+  }
+
+  /// 계약서 PDF 원격 fullUri 및 파일명 로드 워크플로우
+  Future<void> loadContractPdfFile(String fid) async {
+    try {
+      isPdfLoading.value = true;
+      pdfFileData.value = null; // [안전장치] 이전 파일 흔적 지우기
+
+      final result = await ContractApi.fetchContractFile(fid);
+      if (result != null) {
+        pdfFileData.value = result;
+      }
+    } catch (e) {
+      print("❌ [컨트롤러 - PDF 파일 로드 실패]: $e");
+      pdfFileData.value = null;
+    } finally {
+      isPdfLoading.value = false;
     }
   }
 }

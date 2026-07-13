@@ -12,11 +12,13 @@ class PaymentPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 🎯 수정: Get.arguments로부터 이전 화면이 던져준 데이터를 안전하게 꺼냅니다.
-    final Map<String, dynamic> args =
-        Get.arguments ?? {"amount": 0, "orderName": "결제 상품"};
+    final Map<String, dynamic> args = Get.arguments ?? {"amount": 0, "orderName": "결제 상품"};
     final int amount = args["amount"] ?? 0;
     final String orderName = args["orderName"] ?? "결제 상품";
-
+    final String billingId = args["billingId"];
+    final String custName = args["custName"];
+    final String custMobile = args["custMobile"];
+    final String custEmail = args["custEmail"];
     final controller = Get.put(PaymentController());
     // 페이지가 열릴 때 안전하게 초기화 함수 예약 실행
     controller.initTossWidget(amount: amount);
@@ -44,14 +46,8 @@ class PaymentPage extends StatelessWidget {
                   Expanded(
                     child: ListView(
                       children: [
-                        PaymentMethodWidget(
-                          paymentWidget: controller.paymentWidget,
-                          selector: 'methods',
-                        ),
-                        AgreementWidget(
-                          paymentWidget: controller.paymentWidget,
-                          selector: 'agreement',
-                        ),
+                        PaymentMethodWidget(paymentWidget: controller.paymentWidget, selector: 'methods'),
+                        AgreementWidget(paymentWidget: controller.paymentWidget, selector: 'agreement'),
                       ],
                     ),
                   ),
@@ -66,21 +62,18 @@ class PaymentPage extends StatelessWidget {
                             ? () => controller.actionRequestPayment(
                                 amount: amount,
                                 orderName: orderName,
+                                customerName: custName,
+                                customerEmail: custEmail,
+                                uniqueOrderId: billingId,
                               )
                             : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF0053EA),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         child: Text(
                           "$amount원 결제하기",
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                         ),
                       ),
                     ),
@@ -91,17 +84,13 @@ class PaymentPage extends StatelessWidget {
               if (!controller.isWidgetInitialized.value)
                 Container(
                   color: Colors.white,
-                  child: const Center(
-                    child: CircularProgressIndicator(color: Color(0xFF785186)),
-                  ),
+                  child: const Center(child: CircularProgressIndicator(color: Color(0xFF785186))),
                 ),
 
               if (controller.isLoadingApprove.value)
                 Container(
                   color: Colors.black26,
-                  child: const Center(
-                    child: CircularProgressIndicator(color: Colors.white),
-                  ),
+                  child: const Center(child: CircularProgressIndicator(color: Colors.white)),
                 ),
             ],
           );
